@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public abstract class Enemy {
+public abstract class Enemy : MonoBehaviour {
     private string _name;
     protected float _life;
     protected float _damage;
