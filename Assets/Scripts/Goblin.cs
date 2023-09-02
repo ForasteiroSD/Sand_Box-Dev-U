@@ -1,22 +1,21 @@
-// using System.Collections;
-// using System.Collections.Generic;
-// using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
-// public class Goblin : Enemy {
-//     public Goblin(string name, float life, float damage, float speed) : base(name, life, damage, speed) {}
-    
-//     public void Move(float direction) {
-//         Vector3 movement = new Vector3(-direction, 0f, 0f);
-//         transform.position += movement * Time.deltaTime * this.Speed;
-//         if(direction == 1) this.gameObject.GetComponent<SpriteRenderer>().flipX = true;
-//         else this.gameObject.GetComponent<SpriteRenderer>().flipX = false;
-//     }
+public class Goblin : MonoBehaviour {
+    private static Goblin _instance;
 
-//     private void OnEnable() {
-//         GameManager.Move += Move;
-//     }
+    public static Goblin Instance => _instance;
 
-//     private void OnDisable() {
-//         GameManager.Move = Move;
-//     }
-// }
+    private void Awake() {
+        if(_instance == null) {
+            _instance = this;
+        }
+        else {
+            Destroy(this.gameObject);
+            return;
+        }
+
+        DontDestroyOnLoad(_instance);
+    }
+}

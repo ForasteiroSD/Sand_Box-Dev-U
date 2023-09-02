@@ -7,7 +7,7 @@ public class PlayerMovement : MonoBehaviour {
     private PlayerControls inputs;
     private Rigidbody2D rb;
     private Animator animator;
-    private bool canJump = true;
+    private int jumps = 2;
     [SerializeField] private float speed = 3f;
     [SerializeField] private float jumpForce = 5f;
 
@@ -44,16 +44,16 @@ public class PlayerMovement : MonoBehaviour {
     }
 
     private void Jump(InputAction.CallbackContext ctx) {
-        if(canJump) {
+        if(jumps > 0) {
             rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
             animator.SetBool("Jumping", true);
-            canJump = false;
+            jumps--;
         }
     }
 
     void OnCollisionEnter2D(Collision2D collision) {
         if(collision.gameObject.tag == "Ground") {
-            canJump = true;
+            jumps = 2;
             animator.SetBool("Jumping", false);
         }
     }
