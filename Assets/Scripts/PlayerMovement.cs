@@ -1,60 +1,98 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour {
-    private PlayerControls inputs;
-    private Rigidbody2D rb;
-    private Animator animator;
-    private int jumps = 2;
-    [SerializeField] private float speed = 3f;
-    [SerializeField] private float jumpForce = 5f;
+    private Rigidbody2D _rb;
+    private Animator _animator;
+    private SpriteRenderer _spRenderer;
+    [SerializeField] private float _speed = 3f;
+    [SerializeField] private float _jumpHeight = 2.5f;
+    [SerializeField] private float _fallGravityScaleMultiplier = 3f;
+    [SerializeField] private float _timeToJump = .15f;
+    private GameObject _ground;
+    private bool _canJump = true;
+    private float _gravityScale;
+    private float _fallGravityScale;
+    private float _jumpForce;
+    private bool _isJumping = false;
+    private int _lookingDirection; //-1 -> left, 1 -> right
+    public int lookingDirection => _lookingDirection;
+    
+    private void Awake() {
+        //GetComponents
+        _rb = GetComponent<Rigidbody2D>();
+        _animator = GetComponent<Animator>();
+        _spRenderer = GetComponent<SpriteRenderer>();
 
-    void OnEnable() {
-        inputs.Enable();
-        inputs.Player.Jump.performed += Jump;
+        //Jump
+        _gravityScale = _rb.gravityScale;
+        _fallGravityScale = _rb.gravityScale * _fallGravityScaleMultiplier;
+        _rb.gravityScale = _fallGravityScale;
+        _ground = transform.GetChild(0).gameObject;
+
+        //Move
+        _lookingDirection = 1;
     }
 
-    void OnDisable() {
-        inputs.Disable();
-        inputs.Player.Jump.performed -= Jump;
-    }
-
-    // Start is called before the first frame update
-    void Awake() {
-        inputs = new PlayerControls();
-        rb = GetComponent<Rigidbody2D>();
-        animator = GetComponent<Animator>();
-    }
-
-    // Update is called once per frame
-    void Update() {
-        Move(inputs.Player.Move.ReadValue<Vector2>());
-    }
-
-    private void Move(Vector2 movementDirection) {
-        rb.velocity = new Vector2(movementDirection.x * speed, rb.velocity.y);
-        if(movementDirection.x == 0) animator.SetBool("Walking", false);
-        else {
-            animator.SetBool("Walking", true);
-            if(movementDirection.x < 0) this.gameObject.GetComponent<SpriteRenderer>().flipX = true;
-            else this.gameObject.GetComponent<SpriteRenderer>().flipX = false;
+    private void Update() {
+        //Move
+        if(Input.GetAxis("Horizontal") != 0) Move(Input.GetAxis("Horizontal"));
+        else _animator.SetBool("Walking", false);
+        
+        //Jump
+        if(Input.GetKeyDown(KeyCode.W) && _canJump) Jump();
+        if(_isJumping) {
+            if(_rb.velocity.y >= 1.7f && Input.GetKeyUp(KeyCode.W)) {
+                _rb.velocity = new Vector2(_rb.velocity.x, _rb.velocity.y/2);
+                _rb.gravityScale = _fallGravityScale;
+            }
+            if(_rb.velocity.y < 1.7f) {
+                _rb.gravityScale = _fallGravityScale;
+                _isJumping = false;
+            }
         }
     }
 
-    private void Jump(InputAction.CallbackContext ctx) {
-        if(jumps > 0) {
-            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            animator.SetBool("Jumping", true);
-            jumps--;
+    private void OnTriggerStay2D(Collider2D collider) {
+        //Reset canJump
+        if(collider.tag == "Ground") {
+            _canJump = true;
+            _animator.SetBool("Jumping", false);
         }
     }
 
-    void OnCollisionEnter2D(Collision2D collision) {
-        if(collision.gameObject.tag == "Ground") {
-            jumps = 2;
-            animator.SetBool("Jumping", false);
+    private void OnTriggerExit2D(Collider2D collider) {
+        //Cancel canJump
+        if(gameObject.activeInHierarchy && collider.tag == "Ground") StartCoroutine(CancelCanJump());
+    }
+
+    private void Move(float moveDirection) {
+        _animator.SetBool("Walking", true);
+        _rb.velocity = new Vector2(moveDirection * _speed, _rb.velocity.y);
+        if(moveDirection > 0) {
+            _lookingDirection = 1;
+            _spRenderer.flipX = false;
+        } else if(moveDirection < 0) {
+            _lookingDirection = -1;
+            _spRenderer.flipX = true;
         }
+    }
+
+    private void Jump() {
+        _animator.SetBool("Jumping", true);
+        _rb.gravityScale = _gravityScale;
+        _jumpForce = (float) Math.Sqrt(_jumpHeight * (Physics2D.gravity.y * _rb.gravityScale) * -2) *_rb.mass;
+        _rb.velocity = new Vector2(_rb.velocity.x, 0);
+        _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
+        _isJumping = true;
+        _canJump = false;
+    }
+
+    IEnumerator CancelCanJump() {
+        yield return new WaitForSeconds(_timeToJump);
+        _canJump = false;
     }
 }

@@ -11,7 +11,8 @@ public class MoveScene : MonoBehaviour {
     [SerializeField] private float _posY;
 
     void Start() {
-        _player = GameObject.Find("Goblin");
+        // _player = GameObject.Find("Goblin");
+        _player = Goblin.Instance.gameObject;
     }
 
     private void OnCollisionEnter2D(Collision2D collision) {
